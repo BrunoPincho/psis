@@ -96,9 +96,13 @@ char* procura(LIST* a,uint32_t key);
 void imprimeList(LIST* a);
 void eliminar(LIST** a,uint32_t key);
 LIST** altera(LIST** a,uint32_t key,char* value,uint32_t value_len);
+//////////////////////////////////////////////////////////////
 
 
-
-
+/////////logfile///////////////
+FILE* logd;
+void ler_logfile();
+void cria_log();
+void update_log(int comando,uint32_t key, char* valor,uint32_t length);
 ////////////////////////
 #endif
