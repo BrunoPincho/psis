@@ -49,8 +49,9 @@ int kv_connect(char* kv_server_ip,int kv_server_port){
 
 
 void kv_close(int kv_descriptor){
-	
-	if((write(kv_descriptor,"\0",1))<0){
+	memset(&pacote,0,sizeof(pacote));
+	pacote.modo='\0';
+	if((write(kv_descriptor,&pacote,sizeof(pacote)))<0){
 		puts("erro a desconnectar\n");
 		return;
 	}

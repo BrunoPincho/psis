@@ -29,17 +29,29 @@ int main(){
 	
 	if((kv_write(socket,19,"ola\0",4,0))<0)
 		exit(0);
-	
-	if((kv_write(socket,20,"ola2\0",5,0))<0)
+	sleep(1);
+	if((kv_write(socket,19,"ola2\0",5,0))<0)
 		exit(0);
+	sleep(1);
+	if((kv_write(socket,21,"ola3\0",5,0))<0)
+		exit(0);
+	sleep(1);
+	if((kv_write(socket,20,"ola4\0",5,0))<0)
+		exit(0);
+	sleep(1);
+	if((kv_write(socket,21,"ola5\0",5,1))<0)
+		exit(0);
+	sleep(1);	
+	if((kv_write(socket,190,"ola6\0",5,0))<0)
+		exit(0);
+	sleep(1);	
+	if((kv_read(socket,21,msg,5))<0)
+		exit(0);	
+	sleep(1);
 	
+	//kv_read(socket,20,msg,4);	
 	
-	
-	sleep(3);
-	
-	kv_read(socket,20,msg,4);	
-	
-	kv_delete(socket,20);	
+	//kv_delete(socket,20);	
 	/*	
 	if((kv_write(socket,70,"ola3\0",strlen("ola3\0"),0))<0)
 		exit(0);	
@@ -48,11 +60,12 @@ int main(){
 		exit(0);	*/
 		
 	puts("passou aqui");
-	while(1){
-		
-		
-		
-		}
+	int x;
+	printf("sair?\n");
+	scanf("%d",&x);
+	if(x==1)
+		kv_close(socket);
+	
 	
 	//printf("lido: %s\n",valu);
 	
