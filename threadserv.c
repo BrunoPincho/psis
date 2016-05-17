@@ -48,8 +48,10 @@ void dead_child(int sig_num){
 	wait(&status);
 	sig_num=0;
 	if(*shm!='*'){
+		if(quit!=1){
 		printf("child exited, rebooting \n");
 		Reboot();
+		}
 	}
 }
 
@@ -141,19 +143,21 @@ void DataServer(){
 				exit(0);
 			}
 			
-		//cria_log();
+		ler_logfile();
 		
 		while(*shm != '*'){
 					
 			
 									
 		}
+		quit=1;
 		*shm = ' ';
 		free(thread);
 		puts("Data server a sair\n");	
 		matalista(list);
 		shmctl(shmid,IPC_RMID,NULL);	
 		//remove("log.txt");
+		fclose(logd);
 		close(ds);	
 		exit(0);
 }
@@ -230,7 +234,7 @@ void* thread_accept(void *sd){
 	struct timeval tv;
 	fd_set tcpsock;	
 	FD_ZERO(&tcpsock);
-	tv.tv_sec=15;
+	tv.tv_sec=15000;
 	tv.tv_usec=0;
 	FD_SET(socket,&tcpsock);
 	int nsele;
@@ -273,7 +277,7 @@ void* thread_accept(void *sd){
 											
 									list = novalor(list,pacote.key,buffer,pacote.value_length);
 									imprimeList(*list);
-									//update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
+									update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
 									free(buffer);
 									write(socket,"ack",3);
 									break;
@@ -286,7 +290,7 @@ void* thread_accept(void *sd){
 									
 									list = altera(list,pacote.key,buffer,pacote.value_length);
 									imprimeList(*list);
-									//update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
+									update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
 									free(buffer);
 									write(socket,"ack",3);
 									break;
@@ -380,6 +384,7 @@ void *ler_teclado(void *fd){
 					printf("Front a sair\n");
 			
 			close(fs);
+			sleep(0.1);
 			exit(0);
 			
 			}
@@ -488,7 +493,8 @@ void ler_logfile(){
 	
 	logd = fopen("log.txt","r");
 	if(logd==NULL){
-		puts("log não existente\n");
+		puts("log não existente,a criar\n");
+		cria_log();
 		return;
 	}
 	
@@ -498,37 +504,61 @@ void ler_logfile(){
 	uint32_t key;
 	uint32_t length;
 	bzero(dados,128);
+	puts("iniciar a leitura\n");
 	
-	while(fscanf(logd,"%d %d %d",&comando,&key,&length)<0){
-		temp=(char *)malloc(length*sizeof(char));
-		if(fscanf(logd,"%s",temp)<0){
-			puts("erro no fscanf não foi lida uma string\n\n");
-			return;
-		}	
-		switch(comando){
-		case 'W':	list=novalor(list,key,temp,length);
-					break;
-		case 'O':	list=altera(list,key,temp,length);
-					break;
-		case 'D':   /*apaga o valor designado da lista, neste ponto à partida o valor já existe*/
-					break;
+	
+	while(fscanf(logd,"%d %d %d",&comando,&key,&length)>0){
 		
+			printf("dados: %d %d %d\n",comando , key,length);
+			temp=(char *)malloc(length*sizeof(char));
+			fscanf(logd,"%s",temp);
+			printf("value: %s\n",temp);
+			
+		switch(comando){
+			case 'W':	list=novalor(list,key,temp,length);
+						//imprimeList(*list);
+						free(temp);
+						bzero(dados,128);
+						comando=0;
+						key=0;
+						length=0;
+						break;
+			case 'O':	list=altera(list,key,temp,length);
+						//imprimeList(*list);
+						free(temp);
+						bzero(dados,128);
+						comando=0;
+						key=0;
+						length=0;
+						break;
+			case 'D':   //apaga o valor designado da lista, neste ponto à partida o valor já existe
+						break;
+			}
 		}
-		free(temp);
-	}
+	
+	/*
+	while(fgets(dados,128,logd)!=NULL){
+		printf("%s\n",dados);
+		fread(dados, 1, 128, logd);
+	}*/
+	
+	imprimeList(*list);
+	puts("saiu logo\n");
 }
 
 void cria_log(){
 	if((logd=fopen("log.txt","w"))==NULL){
 		puts("falhou a abertura do log\n");
+		
 		return;
 	}
 }
 
 void update_log(int comando,uint32_t key, char* valor,uint32_t length){	
 	//usar o fseek	
+	
 	 	fprintf(logd,"%d %d %d\n",comando,key,length);
 	 	fprintf(logd,"%s\n",valor);
-		
+
 }
 
