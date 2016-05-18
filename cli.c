@@ -1,10 +1,12 @@
 #include "psiskv.h"
+#define MAX_VALUES 10
+#include <limits.h>
 
 int main(){
 	int socket;
 	int port;
-	char valor[30];
-	char *msg;
+	char linha[130];
+	//char *msg;
 	
 	//int modo;
 	//char *valu = valor;
@@ -18,15 +20,21 @@ int main(){
 	
 	printf("socket : %d\n",socket);
 	
-	//write(socket,"hello\n",7);
+	for (uint32_t i = 0; i < UINT_MAX; i ++){
+		sprintf(linha, "%u", i);
+		kv_write(socket, i , linha, strlen(linha)+1, 0);
+		
+	}
 	
-	bzero(valor,30);
+	
+	
+	
 	/*printf("mensagem e modoe chave?\n");
 	scanf("%s %d %u",msg,&modo,&key);
 	int u=strlen(msg);
 	printf("vai enviar isto %s de tamanho %d",msg,u);*/
 	//length=6;
-	
+	/*
 	if((kv_write(socket,19,"ola\0",4,0))<0)
 		exit(0);
 	sleep(1);
@@ -51,7 +59,7 @@ int main(){
 	
 	//kv_read(socket,20,msg,4);	
 	
-	//kv_delete(socket,20);	
+	//kv_delete(socket,20);	*/
 	/*	
 	if((kv_write(socket,70,"ola3\0",strlen("ola3\0"),0))<0)
 		exit(0);	

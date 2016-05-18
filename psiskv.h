@@ -25,7 +25,6 @@ int* serializacao(char *msg);
 struct Pacote{
 	uint32_t key;
 	uint32_t value_length;
-	//char* value;
 	char modo;
 };
 

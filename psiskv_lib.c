@@ -6,23 +6,23 @@ int kv_connect(char* kv_server_ip,int kv_server_port){
 	char porta[5];
 	int port;
 	struct sockaddr_in serv_soc,data_soc;
-	////cria socket////
+	/**************cria socket******************/
 	if((sd=socket(AF_INET,SOCK_STREAM,0))<0)
 		return -1;
 	
 	if((data_server=socket(AF_INET,SOCK_STREAM,0))<0)
 		return -1;	
 		
-	/////	
+	/********************************************/	
 	
-	////estruturar o sockaddr
+	/************estruturar o sockadr************/
 	
 	bzero((char*)&serv_soc,sizeof(serv_soc));
 	
 	serv_soc.sin_family=AF_INET;
 	serv_soc.sin_addr.s_addr=inet_addr(kv_server_ip);
 	serv_soc.sin_port=htons(kv_server_port);
-	////
+	/********************************************/
 	
 	if(connect(sd,(struct sockaddr*)&serv_soc,sizeof(struct sockaddr))<0){
 		return -1;
@@ -61,11 +61,7 @@ void kv_close(int kv_descriptor){
 }
 
 int kv_write(int kv_descriptor,uint32_t key,char* value,uint32_t value_length,int kv_overwrite){
-	//char *modo;
 	char ACK[3];
-	/*char chave[10];
-	char length[10];
-	char *mensagem;*/
 	//struct timeval tv;
 	//int nsele;
 	bzero(ACK,3);
@@ -77,27 +73,14 @@ int kv_write(int kv_descriptor,uint32_t key,char* value,uint32_t value_length,in
 	FD_SET(kv_descriptor,&tcpsock);*/
 	memset(&pacote,0,sizeof(pacote));
 	if(kv_overwrite==1){
-		pacote.modo='O'; //o maiusculo010
+		pacote.modo='O';
 		}else{
 			pacote.modo='W';
 		}
 		
 		pacote.key=key;
 		pacote.value_length=value_length;
-		//pacote.value=(char*)malloc((pacote.value_length+1)*sizeof(char));
-		//strcpy(pacote.value,value);
-		
-		//strcpy(pacote.value,"olaa");
-		
-	/*sprintf(chave,"%u",key);
-	sprintf(length,"%u",value_length);
-	
-	mensagem=(char *)malloc((value_length+strlen(chave)+4)*sizeof(char));*/
-	
-	/*if((write(kv_descriptor,&pacote,sizeof(pacote)))<0){
-		puts("erro a enviar\n");
-		return -1;
-	}*/
+
 	if((write(kv_descriptor,&pacote,sizeof(pacote)))<0){
 		puts("erro a enviar\n");
 		return -1;
