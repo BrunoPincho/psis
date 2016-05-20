@@ -543,7 +543,7 @@ void ler_logfile(){
 	}*/
 	
 	imprimeList(*list);
-	puts("saiu logo\n");
+	puts("******parou de ler o log*****\n");
 }
 
 void cria_log(){
@@ -556,9 +556,9 @@ void cria_log(){
 
 void update_log(int comando,uint32_t key, char* valor,uint32_t length){	
 	//usar o fseek	
-	
+	pthread_mutex_lock(&mux);
 	 	fprintf(logd,"%d %d %d\n",comando,key,length);
 	 	fprintf(logd,"%s\n",valor);
-
+	pthread_mutex_unlock(&mux);
 }
 

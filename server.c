@@ -8,7 +8,7 @@ int main(){
 	
 	//inicializar o mutexe
 	sincro.valor=0;
-	pthread_mutex_init(&mux,NULL);
+	
 	/////
 	
 	

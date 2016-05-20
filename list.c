@@ -8,11 +8,13 @@ LIST** novalor(LIST** a, uint32_t key,char* value,uint32_t value_len){
 
 LIST* novop;
 LIST* aux=NULL;
+LIST* aux2=NULL;
 
 aux=*a;
-	
+aux2=*a;
 
 	//Caso seja o primeiro
+	
 	if(aux==NULL){
 		novop = (LIST *)malloc(sizeof(LIST));
 			if(novop == NULL) exit(-2);
@@ -27,26 +29,36 @@ aux=*a;
 		novop->ant=NULL;
 
 		aux=novop;
+		pthread_mutex_lock(&mux);
 		*a=aux;
+		pthread_mutex_unlock(&mux);
 		return a;
 	}
+	
 
 	printf("nao é o primeiro na lista\n");
 	//verificar se ja existe	
-	aux=*a;
-	while(aux!=NULL){
-			if(aux->key==key){
+	//
+	aux2=*a;
+	
+	pthread_mutex_lock(&mux);
+	
+	while(aux2!=NULL){
+			if(aux2->key == key){
 				printf("valor já existente,acesso invalido\n");
+				pthread_mutex_unlock(&mux);
 				return a;
 			}
-			aux=aux->next;
+			pthread_mutex_lock(&mux2);
+			aux2=aux2->next;
+			pthread_mutex_unlock(&mux2);
 		}
-
+	pthread_mutex_unlock(&mux);
 
 
 	
 	//Caso nao seja o primeiro
-		aux=*a;
+	
 	novop = (LIST *)malloc(sizeof(LIST));
 		if(novop == NULL) exit(-2);
 
@@ -59,16 +71,21 @@ aux=*a;
 	novop->next=NULL;
 	novop->ant=NULL;
 		if(aux->next!= NULL){
-			while((aux->next!=NULL) ||(aux->key!=key)){
+			pthread_mutex_lock(&mux3);
+			while(aux->next!=NULL){
 				aux=aux->next;
 			}
+			pthread_mutex_unlock(&mux3);
+			pthread_mutex_lock(&mux);
 			aux->next = novop;
 			novop->ant=aux;
+			pthread_mutex_unlock(&mux);
+		
 		}else{
-	
+			pthread_mutex_lock(&mux);
 			aux->next = novop;
 			novop->ant= aux;
-
+			pthread_mutex_unlock(&mux);
 		}
 	return a;
 }
@@ -81,13 +98,14 @@ LIST* aux;
 LIST* prox;
 
 	aux=*a;
-
+pthread_mutex_lock(&mux);
 	while(aux!=NULL){
 		prox=aux->next;
 		free(aux->value);
 		free(aux);
 		aux=prox;
 	}
+pthread_mutex_unlock(&mux);
 	*a=aux;
 	printf("Todos os items foram removidos\n");
 return;
@@ -99,13 +117,16 @@ char* procura(LIST* a,uint32_t key){
 
 	aux=a;
 	int o=0;
+	pthread_mutex_lock(&mux);
 		while(aux!=NULL){
 			if(aux->key==key){
 				o=1;
+				pthread_mutex_unlock(&mux);
 				return aux->value;
 			}
 			aux=aux->next;
 		}
+	pthread_mutex_unlock(&mux);
 		if(o==0){
 			printf("Nao existe nenhum valor para a chave: %u\n",key);
 			aux=NULL;
@@ -116,21 +137,24 @@ char* procura(LIST* a,uint32_t key){
 LIST** altera(LIST** a,uint32_t key,char* value,uint32_t value_len){
 
 	LIST* aux;
-
 	aux=*a;
 	int o=0;
+	pthread_mutex_lock(&mux);
 		while(aux!=NULL){
 			if(aux->key==key){
 				o=1;
+				pthread_mutex_lock(&mux2);
 				aux->key=key;
 				aux->value=realloc(aux->value,sizeof(char)*value_len);
 				bzero(aux->value,value_len);
 				strcpy(aux->value,value);
-				
+				pthread_mutex_unlock(&mux2);
+				pthread_mutex_unlock(&mux);
 				return a;
 			}
 			aux=aux->next;
 		}
+	pthread_mutex_unlock(&mux);
 		if(o==0){
 			printf("Nao existe nenhum valor para a chave: %u\n",key);
 			aux=NULL;
@@ -153,12 +177,13 @@ LIST* aux;
 	if(aux==NULL){
 		printf("LISTA VAZIA\n");
 	}
-
+pthread_mutex_lock(&mux);
 	while(aux!=NULL){
 	printf("Chave: %u Valor: %s\n",aux->key,aux->value);
 	
 	aux=aux->next;
 	}
+pthread_mutex_unlock(&mux);
 
 return;
 }
@@ -271,16 +296,5 @@ return;
 }
 
 
-/*************************************************************************************************************************/
-/*
-int main(){
-
-LIST* lista=NULL;
-
-commandList(&lista);
-
-
-exit(0);
-}*/
 
 

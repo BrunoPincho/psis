@@ -35,6 +35,8 @@ int sum_trd;//soma das threads
 
 void morte_geral();
 pthread_mutex_t mux;
+pthread_mutex_t mux2;
+pthread_mutex_t mux3;
 int global;
 void *ler_teclado(void* fd);
 void *Master_thread();
