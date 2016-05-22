@@ -6,13 +6,7 @@ int main(){
 	sum_trd=0;
 	quit=0;
 	
-	//inicializar o mutexe
 	sincro.valor=0;
-	
-	/////
-	
-	
-	
 	
 	if((front_server = fork())==-1){
 		perror("fork");

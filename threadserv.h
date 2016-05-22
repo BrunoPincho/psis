@@ -34,53 +34,55 @@ void* thread_accept(void* sd);
 int sum_trd;//soma das threads
 
 void morte_geral();
+
+/*MUTEXES*/
 pthread_mutex_t mux;
 pthread_mutex_t mux2;
 pthread_mutex_t mux3;
+/**********/
+
 int global;
 void *ler_teclado(void* fd);
 void *Master_thread();
-//pipeline
+
 int udp_server();
 
 
-////servidores///////////////////////////
+/************servidores*********************/
 void Frontserver();
-void DataServer();
-	
-////////////////////////////////////////	
+void DataServer();	
+/*******************************************/	
 int udp_cliente();
 struct sockaddr_in front_addr;
 int fd;
-/////////
+
 int quit;
 
 void dead_child(int sig_num);//detecta se o filho terminou subitamente
 void dead_parent(int sig_num);//detecta se o processo pai terminou subitamente sem terminar o processo filho
-////variaveis do mutexe
+
 struct clausa{
 	int valor;
 }sincro;
 
-//////reboots
+/*reboots*/
 void Reboot();
 
-/////////estrutura com os valores///////
+/*estrutura com os valores*/
 
 struct Pacote{
 	uint32_t key;
-	uint32_t value_length;
-	//char* value;	
+	uint32_t value_length;	
 	char modo;
 };
 
-///shared memory
+/*shared memory*/
 int cria_shmem(int porta);
 void acede_shmem(char* porta);
 void terminu_shmem();
-/////////////////////////
+/********************************/
 
-////funcoes da lista////
+/**funcoes da lista**/
 
 typedef struct ListValues{
 	uint32_t key;
@@ -98,13 +100,12 @@ char* procura(LIST* a,uint32_t key);
 void imprimeList(LIST* a);
 void eliminar(LIST** a,uint32_t key);
 LIST** altera(LIST** a,uint32_t key,char* value,uint32_t value_len);
-//////////////////////////////////////////////////////////////
+/******************************************************************/
 
-
-/////////logfile///////////////
+/**********logfile******************/
 FILE* logd;
 void ler_logfile();
 void cria_log();
 void update_log(int comando,uint32_t key, char* valor,uint32_t length);
-////////////////////////
+/******************************************************************/
 #endif

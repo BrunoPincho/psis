@@ -62,34 +62,34 @@ void dead_parent(int sig_num){
 	
 }
 
+void brokenpipe(){
+	printf("partiu o pipe");
+	
+}
+
 void Frontserver(){
 		int socket;
 		quit=0;
 		puts("entrou front_server");
 		
 		int fd;
-		//fd = udp_cliente();
 		char resposta[5]="\0";
+
 		
-		//fifo_IN = open(FIFO_NAME, O_WRONLY);
-		//fifo_OUT = open(FIFO_NAME,O_RDONLY);
-		
-		//close(fd[0]);
-		
-		//esta função é um system call que faz com que a morte do processo pai, do processo que chama a função, seja transmitida pelo kernel ao processo filho atraves do sinal SIGHUP
+		/*esta função é um system call que faz com que a morte do processo pai, do processo que chama a função, seja transmitida pelo kernel ao processo filho atraves do sinal SIGHUP*/
 		prctl(PR_SET_PDEATHSIG, SIGHUP);
 		
-		////sinal de termino de um processo filho
+		/*sinal de termino de um processo filho*/
 		signal(SIGCHLD,dead_child);
-		////
 		
-		/////sinal de termino de um processo pai
+		
+		/*sinal de termino de um processo pai*/
 		signal(SIGHUP,dead_parent);
-		/////
+		
 		
 		pthread_create(&teclas,NULL,ler_teclado,&fd);
 		sum_trd++;
-		//int n;
+		
 		cria_server(1);
 		int addrlen1;
 	
@@ -116,27 +116,27 @@ void DataServer(){
 		pthread_t Master;
 		int porta=0;
 		puts("entrou data server");
-		//struct sockaddr_in cli_addr;
-		//int addrlen;
+
 		quit=0;
-		//int n;
+
 		porta=cria_server(0);
-		//socket_udp = udp_server();
-		//char leitura[10];
+
 		char responder[5];
 		bzero(responder,5);
 		pthread_create(&Master,NULL,Master_thread,NULL);		
-		//addrlen=sizeof(cli_addr);
+
 		
 		prctl(PR_SET_PDEATHSIG, SIGHUP);
 	
-		////sinal de termino de um filho
+		/*sinal de termino de um filho*/
 		signal(SIGCHLD,dead_child);
-		////
 		
-		/////sinal de termino de um processo pai
+		
+		/*sinal de termino de um processo pai*/
 		signal(SIGHUP,dead_parent);
-		/////
+
+		signal(SIGPIPE,SIG_IGN);
+		
 			
 		if(cria_shmem(porta)<0){
 				printf("erro na memoria\n");
@@ -156,7 +156,7 @@ void DataServer(){
 		puts("Data server a sair\n");	
 		matalista(list);
 		shmctl(shmid,IPC_RMID,NULL);	
-		//remove("log.txt");
+
 		fclose(logd);
 		close(ds);	
 		exit(0);
@@ -165,7 +165,7 @@ void DataServer(){
 
 int cria_server(int servidor){
 	if(servidor==1){
-	//meter noutro ficheiro 
+
 			if((fs = socket(AF_INET,SOCK_STREAM,0))<0){
 			puts("erro no socket");
 			exit(-1);
@@ -185,7 +185,7 @@ int cria_server(int servidor){
 				servsoc.sin_port = htons(port);
 			}
 			printf("porta %d \n",port);
-			////
+
 			if(listen(fs,5)==-1)exit(1);
 			return port;
 	}
@@ -210,12 +210,6 @@ int cria_server(int servidor){
 				porta++;
 				servsoc.sin_port = htons(porta);
 			}
-			
-
-		/*if(bind (ds,(struct sockaddr *) &servsoc, sizeof(servsoc))<0){
-			printf("erro bind DS \n");	
-			exit(-1);
-		}*/
 		
 		if(listen(ds,5)==-1)exit(1);
 		
@@ -226,19 +220,20 @@ int cria_server(int servidor){
 
 void* thread_accept(void *sd){
 	struct Pacote pacote;	
-	//char* valor;
 	char *buffer;
 	int socket;
 	socket=*((int *) sd);
-	//valores do timeout de recepção
+
+	/*valores do timeout de recepção*/
 	struct timeval tv;
 	fd_set tcpsock;	
 	FD_ZERO(&tcpsock);
 	tv.tv_sec=15000;
 	tv.tv_usec=0;
+
 	FD_SET(socket,&tcpsock);
 	int nsele;
-	
+	signal(SIGPIPE,brokenpipe);
 	
 	while(1){
 		FD_ZERO(&tcpsock);
@@ -266,23 +261,25 @@ void* thread_accept(void *sd){
 				
 				read(socket,&pacote,sizeof(pacote));
 				printf("lido %d, tamanho %d e modo %c\n",pacote.key,pacote.value_length,pacote.modo);
-				//printf("value :%s\n",buffer);
 					switch(pacote.modo){
-					//if(pacote.modo =='W'){
-						case 'W':
-									buffer=(char*)malloc(pacote.value_length*sizeof(char));
-									read(socket,buffer,pacote.value_length-1);
-									printf("value: %s\n",buffer);
-									
+						case 'W':									
+										buffer=(char*)malloc(pacote.value_length*sizeof(char));
+										read(socket,buffer,pacote.value_length-1);
+										printf("value: %s\n",buffer);
+										if(strcmp(buffer,procura(*list,pacote.key))==0){
+											write(socket,"n",1);
+											free(buffer);
 											
-									list = novalor(list,pacote.key,buffer,pacote.value_length);
-									imprimeList(*list);
-									update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
-									free(buffer);
-									write(socket,"ack",3);
-									break;
-							//}
-					//if(pacote.modo =='O'){
+										}else{
+									
+										list = novalor(list,pacote.key,buffer,pacote.value_length);
+										imprimeList(*list);
+										update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
+										free(buffer);
+										write(socket,"ack",3);
+										}
+										break;
+									
 						case 'O':
 									buffer=(char*)malloc(pacote.value_length*sizeof(char));
 									read(socket,buffer,pacote.value_length);
@@ -290,41 +287,34 @@ void* thread_accept(void *sd){
 									
 									list = altera(list,pacote.key,buffer,pacote.value_length);
 									imprimeList(*list);
-									update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
+									update_log(pacote.modo,pacote.key,buffer,pacote.value_length+1);
 									free(buffer);
 									write(socket,"ack",3);
 									break;
-								//}
-								
-				//if(pacote.modo == 'R'){
-						case 'R':
+						case 'R':		
 									buffer=(char*)malloc(pacote.value_length*sizeof(char));
 									strcpy(buffer,procura(*list,pacote.key));
 									printf("%s\n",buffer);
 									
 									if(write(socket,buffer,pacote.value_length)<0)
-										exit(0);										
+										exit(0);
+									
 									free(buffer);	
 									break;
-					//}				
-			//	if(pacote.modo == 'D'){	
 						case 'D':
 									printf("vai ser apagado o valor cuja key é %d",pacote.key);
-									/****inserir o codigo que vai à lista e apaga os valores***/
-									//update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
+									eliminar(list,pacote.key);
+									update_log(pacote.modo,pacote.key,"\0",0);
+									imprimeList(*list);
 									write(socket,"ack",3);		
-									break;			
-					//}
-					
-			//	if(pacote.modo == '\0'){	
+									break;				
 						case '\0':
 									printf("thread nº %d a sair\n",sum_trd);
 									close(socket);
 									sum_trd--;
 									pthread_exit(NULL);
 									return NULL;		
-									break;			
-					//}	
+									break;	
 				}		
 				
 					
@@ -346,9 +336,6 @@ void *Master_thread(){
 								exit(1);
 				}
 					
-					//sscanf(leitura,"%d",&sock);		
-					//
-					
 				printf("connectada a socket:%d\n",sock);			
 				printf("criada thread #%d\n",sum_trd);
 				pthread_create(&thread[sum_trd],NULL,thread_accept,&sock);
@@ -359,18 +346,10 @@ void *Master_thread(){
 				thread=realloc(thread,sizeof(pthread_t)*thread_size);
 			}
 		}
-	
-	/*for(i=0;i<sum_trd;i++){
-			pthread_join(thread[i],NULL);
-		}*/
 }
-
-
 
 void *ler_teclado(void *fd){
 	char mensagem[128];
-	//int dataserver;
-	//dataserver=*((int *) fd);
 
 	puts("a ler do teclado\n");
 	while(fgets(mensagem,128,stdin)!=NULL){
@@ -378,7 +357,6 @@ void *ler_teclado(void *fd){
 		printf("\nfoi escrito: %s \n",mensagem);
 		if(strncmp(mensagem,"quit",4)==0){
 					quit=1;
-			//if((sendto(dataserver,"\0",2,0,(struct sockaddr*)&front_addr,sizeof(front_addr))<0))
 					terminu_shmem();	
 						
 					printf("Front a sair\n");
@@ -395,7 +373,7 @@ void *ler_teclado(void *fd){
 
 
 
-////MEMORIA PARTILHADA
+/***************************************MEMORIA PARTILHADA****************************************************/
 
 int cria_shmem(int porta){
 	
@@ -463,6 +441,7 @@ void acede_shmem(char* porta){
         putchar(*s);
         i++; 
 	}
+return;
 }
 
 
@@ -486,12 +465,13 @@ void terminu_shmem(){
         exit(1);
     }
      *shm='*';
+return;
 }
-//////////////////////////
+/**********************************************LOG FILE****************************************************/
 
 void ler_logfile(){
 	
-	logd = fopen("log.txt","r");
+	logd = fopen("log.txt","a+");
 	if(logd==NULL){
 		puts("log não existente,a criar\n");
 		cria_log();
@@ -509,45 +489,43 @@ void ler_logfile(){
 	
 	while(fscanf(logd,"%d %d %d",&comando,&key,&length)>0){
 		
-			printf("dados: %d %d %d\n",comando , key,length);
+			printf("dados: %d %d %d\n",comando,key,length);
+		if(length!=0){
 			temp=(char *)malloc(length*sizeof(char));
 			fscanf(logd,"%s",temp);
 			printf("value: %s\n",temp);
-			
+			}
 		switch(comando){
 			case 'W':	list=novalor(list,key,temp,length);
-						//imprimeList(*list);
 						free(temp);
 						bzero(dados,128);
 						comando=0;
 						key=0;
 						length=0;
+						imprimeList(*list);
 						break;
 			case 'O':	list=altera(list,key,temp,length);
-						//imprimeList(*list);
 						free(temp);
 						bzero(dados,128);
 						comando=0;
 						key=0;
 						length=0;
+						imprimeList(*list);
 						break;
-			case 'D':   //apaga o valor designado da lista, neste ponto à partida o valor já existe
+			case 'D':   
+						eliminar(list,key);
+						imprimeList(*list);
 						break;
 			}
 		}
 	
-	/*
-	while(fgets(dados,128,logd)!=NULL){
-		printf("%s\n",dados);
-		fread(dados, 1, 128, logd);
-	}*/
-	
 	imprimeList(*list);
 	puts("******parou de ler o log*****\n");
+return;
 }
 
 void cria_log(){
-	if((logd=fopen("log.txt","w"))==NULL){
+	if((logd=fopen("log.txt","w+"))==NULL){
 		puts("falhou a abertura do log\n");
 		
 		return;
@@ -555,10 +533,10 @@ void cria_log(){
 }
 
 void update_log(int comando,uint32_t key, char* valor,uint32_t length){	
-	//usar o fseek	
 	pthread_mutex_lock(&mux);
 	 	fprintf(logd,"%d %d %d\n",comando,key,length);
 	 	fprintf(logd,"%s\n",valor);
 	pthread_mutex_unlock(&mux);
+return;
 }
 

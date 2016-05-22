@@ -6,8 +6,9 @@ int main(){
 	int socket;
 	int port;
 	char linha[130];
+	int x;
 	//char *msg;
-	
+	uint32_t key;
 	//int modo;
 	//char *valu = valor;
 	
@@ -19,28 +20,28 @@ int main(){
 	
 	
 	printf("socket : %d\n",socket);
-	
-	for (uint32_t i = 0; i < UINT_MAX; i ++){
+	/*
+	for (uint32_t i = 0; i < 10; i ++){
 		sprintf(linha, "%u", i);
 		kv_write(socket, i , linha, strlen(linha)+1, 0);
-		
+		sleep(1);
 	}
-	
+	*/
 	
 	
 	
 	/*printf("mensagem e modoe chave?\n");
 	scanf("%s %d %u",msg,&modo,&key);
 	int u=strlen(msg);
-	printf("vai enviar isto %s de tamanho %d",msg,u);*/
+	printf("vai enviar isto %s de tamanho %d",msg,u);
 	//length=6;
-	/*
-	if((kv_write(socket,19,"ola\0",4,0))<0)
+	key=190;
+	if((kv_write(socket,key,"ola\0",4,0))<0)
 		exit(0);
 	sleep(1);
-	if((kv_write(socket,19,"ola2\0",5,0))<0)
+	if((kv_write(socket,key,"ola2\0",6,0))<0)
 		exit(0);
-	sleep(1);
+	sleep(1);*//*
 	if((kv_write(socket,21,"ola3\0",5,0))<0)
 		exit(0);
 	sleep(1);
@@ -55,11 +56,18 @@ int main(){
 	sleep(1);	
 	if((kv_read(socket,21,msg,5))<0)
 		exit(0);	
-	sleep(1);
+	sleep(1);*/
 	
 	//kv_read(socket,20,msg,4);	
-	
-	//kv_delete(socket,20);	*/
+	if((kv_write(socket,190,"ola9\0",6,0))<0){
+		
+	}
+		sleep(1);
+	if((kv_read(socket,190,linha,5))<0)
+		exit(0);	
+	printf("lido: %s\n",linha);
+		sleep(1);	
+	//kv_delete(socket,4);
 	/*	
 	if((kv_write(socket,70,"ola3\0",strlen("ola3\0"),0))<0)
 		exit(0);	
@@ -68,7 +76,7 @@ int main(){
 		exit(0);	*/
 		
 	puts("passou aqui");
-	int x;
+	
 	printf("sair?\n");
 	scanf("%d",&x);
 	if(x==1)

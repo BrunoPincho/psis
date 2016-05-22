@@ -57,14 +57,13 @@ void kv_close(int kv_descriptor){
 	}
 	close(kv_descriptor);
 	return;
-		
 }
 
 int kv_write(int kv_descriptor,uint32_t key,char* value,uint32_t value_length,int kv_overwrite){
-	char ACK[3];
+	char ACK[4];
 	//struct timeval tv;
 	//int nsele;
-	bzero(ACK,3);
+	bzero(ACK,4);
 	
 	/*fd_set tcpsock;	
 	FD_ZERO(&tcpsock);
@@ -82,21 +81,27 @@ int kv_write(int kv_descriptor,uint32_t key,char* value,uint32_t value_length,in
 		pacote.value_length=value_length;
 
 	if((write(kv_descriptor,&pacote,sizeof(pacote)))<0){
-		puts("erro a enviar\n");
+		puts("erro a enviar pacote\n");
 		return -1;
 	}
 	
 	if((write(kv_descriptor,value,value_length-1))<0){
-		puts("erro a enviar\n");
+		puts("erro a enviar value\n");
 		return -1;
 	}
 
-	if(read(kv_descriptor,ACK,3)<0){
+	if(read(kv_descriptor,ACK,4)<0){
 		puts("lixou read");
 		}
+
+	if(strncmp(ACK,"n",1)==0){
+		puts("Ja existe esta chave\n");
+		
+		return -2;
+	}
 	
 	if(strncmp(ACK,"ack",3)==0){
-		puts("sucesso\n");
+		puts("sucesso no write\n");
 		
 		return 1;
 	}
@@ -153,7 +158,6 @@ int kv_read(int kv_descriptor, uint32_t key,char* value, uint32_t value_length){
 	pacote.modo='R';	
 	pacote.key=key;
 	pacote.value_length=value_length;
-	value=(char*)malloc((pacote.value_length+1)*sizeof(char));	
 	
 	
 	if((write(kv_descriptor,&pacote,sizeof(pacote))<0)){
@@ -172,18 +176,15 @@ int kv_read(int kv_descriptor, uint32_t key,char* value, uint32_t value_length){
 	
 	if(nsele<0){
 		puts("erro no selec de timeout\n");
-		
+	
 		return -1;
 	}
 	
 	if((read(kv_descriptor,value,value_length))<0){
 		puts("falhou o read");
-		free(value);
+		
 		return -1;	
 	}
-	
-	printf("resposta do read %s\n",value);
-	
 	
 	if(strcmp(value,"\0")==0){
 		puts("valor não existente");
@@ -191,7 +192,8 @@ int kv_read(int kv_descriptor, uint32_t key,char* value, uint32_t value_length){
 	}
 	
 	
-	free(value);
+	
+
 	return strlen(value);
 }
 
@@ -211,13 +213,11 @@ int kv_delete(int kv_descriptor,uint32_t key){
 		puts("erro a ler\n");
 		return -1;
 	}
+
 	if(strncmp(Ack,"ack",3)==0){
-	puts("valor apagado da key value storage\n");
-	return 0;
+		puts("valor apagado da key value storage\n");
+		return 0;
 	}
 	
 	return -1;
 }
-
-
-

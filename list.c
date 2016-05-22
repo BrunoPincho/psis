@@ -2,8 +2,8 @@
 
 
 
-/**************************************************************************************************************************/
-//Cria um novo elemento na lista
+/*************************************************Cria um novo elemento na lista************************************************************************/
+
 LIST** novalor(LIST** a, uint32_t key,char* value,uint32_t value_len){
 
 LIST* novop;
@@ -13,7 +13,7 @@ LIST* aux2=NULL;
 aux=*a;
 aux2=*a;
 
-	//Caso seja o primeiro
+	/*Caso seja o primeiro*/
 	
 	if(aux==NULL){
 		novop = (LIST *)malloc(sizeof(LIST));
@@ -37,8 +37,9 @@ aux2=*a;
 	
 
 	printf("nao é o primeiro na lista\n");
-	//verificar se ja existe	
-	//
+
+	/*verificar se ja existe*/	
+
 	aux2=*a;
 	
 	pthread_mutex_lock(&mux);
@@ -57,7 +58,7 @@ aux2=*a;
 
 
 	
-	//Caso nao seja o primeiro
+	/*Caso nao seja o primeiro*/
 	
 	novop = (LIST *)malloc(sizeof(LIST));
 		if(novop == NULL) exit(-2);
@@ -90,8 +91,8 @@ aux2=*a;
 	return a;
 }
 
-/*************************************************************************************************************************/
-//Elimina toda a lista
+/************************************************Elimina toda a lista************************************************************************/
+
 void matalista(LIST** a){
 
 LIST* aux;
@@ -162,13 +163,6 @@ LIST** altera(LIST** a,uint32_t key,char* value,uint32_t value_len){
 		return a;
 }
 
-
-
-
-
-
-
-
 /***************************************************************************************************************************/
 void imprimeList(LIST* a){
 LIST* aux;
@@ -192,7 +186,6 @@ void eliminar(LIST** a,uint32_t key){
 
 	LIST* aux=NULL;
 	LIST* ant=NULL;
-	//char* buffer;
 	LIST* prox=NULL;
 
 	if(a==NULL){
@@ -201,34 +194,44 @@ void eliminar(LIST** a,uint32_t key){
 	}
 	
 	aux=*a;
+pthread_mutex_lock(&mux);
 	while(aux!=NULL){
 		if(aux->key==key){
 				if(aux->ant==NULL){ //VER SE E O 1o
 					prox=aux->next;
 						if(prox==NULL){ //SE FOR O UNICO ELEMENTO DA LISTA
+							pthread_mutex_lock(&mux2);
 							free(aux->value);
 							free(aux);
 							*a=prox;
 							printf("Valor Removido\n");
+							pthread_mutex_unlock(&mux2);
+							pthread_mutex_unlock(&mux);
 							return;
 						}
+					pthread_mutex_lock(&mux2);
 					prox->ant=NULL;
 					free(aux->value);
 					free(aux);
 					*a=prox;
 					printf("Valor Removido\n");
+				pthread_mutex_unlock(&mux2);
+				pthread_mutex_unlock(&mux);
 					return;
 				}
 				if(aux->next==NULL){ //VER SE E O ULTIMO
+					pthread_mutex_lock(&mux2);
 					ant=aux->ant;
 					ant->next=NULL;
 					free(aux->value);
 					free(aux);
 					printf("Valor Removido\n");
+					pthread_mutex_unlock(&mux2);
+					pthread_mutex_unlock(&mux);
 					return;
 				}
 				else{ //E UM PARA O MEIO
-				
+					pthread_mutex_lock(&mux2);
 					ant=aux->ant;
 					prox=aux->next;
 					ant->next=prox;
@@ -236,65 +239,18 @@ void eliminar(LIST** a,uint32_t key){
 					free(aux->value);
 					free(aux);
 					printf("Valor Removido\n");
+					pthread_mutex_unlock(&mux2);
+					pthread_mutex_unlock(&mux);
 					return;
 				}
 		}
 		aux=aux->next;
 	}
+	pthread_mutex_unlock(&mux);
 	printf("Nao existe valor para a chave: %u\n",key);
 return;
 }
 /*************************************************************************************************************************/
-void commandList(LIST** lista){
-
-uint32_t key = 0;
-
-uint32_t value_len = 128;
-
-char* value;
-
-value=(char *)malloc(value_len*sizeof(char));
-
-key=1;
-strcpy(value,"Mekie Bitches!");
-
-lista=novalor(lista, key,value,value_len);
-
-key=2;
-bzero(value,128);
-strcpy(value,"SUP!");
-
-lista=novalor(lista, key,value,value_len);
-
-imprimeList(*lista);
-
-key=3;
-bzero(value,128);
-strcpy(value,"Ligthning Strike!");
-
-lista=novalor(lista, key,value,value_len);
-
-imprimeList(*lista);
-
-key=4;
-bzero(value,128);
-strcpy(value,"Jace!");
-
-lista=novalor(lista, key,value,value_len);
-
-imprimeList(*lista);
-
-key=2;
-eliminar(lista,key);
-
-imprimeList(*lista);
-
-matalista(lista);
-
-free(value);
-return;
-}
-
 
 
 
