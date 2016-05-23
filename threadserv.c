@@ -7,7 +7,7 @@
 LIST* LISTA = NULL;
 LIST** list=&LISTA;
 pthread_t *thread;
-
+ sigset_t signal_mask,saved_mask;
 int shmid;
 char *shm;
 pthread_t teclas;
@@ -61,11 +61,25 @@ void dead_parent(int sig_num){
 		Reboot();
 	
 }
+/*
+void* brokenpipe(){
+	//sigset_t* set=arg;
+	//int sig;
 
-void brokenpipe(){
-	printf("partiu o pipe");
-	
-}
+	struct sigaction sa;
+	sa.sa_handler = SIG_IGN;
+	sa.sa_flags=0;
+
+	for(;;){
+		sigaction(SIGPIPE,&sa,0);
+	}
+
+	//int sock ;
+	//sock=*((int *) arg);
+	//close(sock);
+	puts("mario out\n");
+	pthread_exit(NULL);
+}*/
 
 void Frontserver(){
 		int socket;
@@ -116,15 +130,25 @@ void DataServer(){
 		pthread_t Master;
 		int porta=0;
 		puts("entrou data server");
-
+		
 		quit=0;
 
 		porta=cria_server(0);
 
+		/********signal handler sigpiper*********/
+		
+		/*pthread_t mario;
+		sigemptyset (&signal_mask);
+	    sigaddset (&signal_mask, SIGPIPE);
+	    pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
+	    pthread_create(&mario, NULL, &brokenpipe, NULL);
+	   */
+
+
 		char responder[5];
 		bzero(responder,5);
 		pthread_create(&Master,NULL,Master_thread,NULL);		
-
+		/***********************************/
 		
 		prctl(PR_SET_PDEATHSIG, SIGHUP);
 	
@@ -134,8 +158,7 @@ void DataServer(){
 		
 		/*sinal de termino de um processo pai*/
 		signal(SIGHUP,dead_parent);
-
-		signal(SIGPIPE,SIG_IGN);
+	    
 		
 			
 		if(cria_shmem(porta)<0){
@@ -225,7 +248,7 @@ void* thread_accept(void *sd){
 	socket=*((int *) sd);
 
 	/*valores do timeout de recepção*/
-	struct timeval tv;
+	/*struct timeval tv;
 	fd_set tcpsock;	
 	FD_ZERO(&tcpsock);
 	tv.tv_sec=15000;
@@ -233,10 +256,13 @@ void* thread_accept(void *sd){
 
 	FD_SET(socket,&tcpsock);
 	int nsele;
-	signal(SIGPIPE,brokenpipe);
+		*/
+		
+		
+		
 	
 	while(1){
-		FD_ZERO(&tcpsock);
+		/*FD_ZERO(&tcpsock);
 		FD_SET(socket,&tcpsock);
 		nsele=select(socket+1,&tcpsock,0,0,&tv);
 		if(nsele<0){
@@ -254,7 +280,7 @@ void* thread_accept(void *sd){
 				sum_trd--;
 				pthread_exit(NULL);
 				return NULL;
-				}
+				}*/
 			
 			
 						
@@ -264,6 +290,7 @@ void* thread_accept(void *sd){
 					switch(pacote.modo){
 						case 'W':									
 										buffer=(char*)malloc(pacote.value_length*sizeof(char));
+										bzero(buffer,pacote.value_length);
 										read(socket,buffer,pacote.value_length-1);
 										printf("value: %s\n",buffer);
 										if(strcmp(buffer,procura(*list,pacote.key))==0){
@@ -273,7 +300,7 @@ void* thread_accept(void *sd){
 										}else{
 									
 										list = novalor(list,pacote.key,buffer,pacote.value_length);
-										imprimeList(*list);
+										//imprimeList(*list);
 										update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
 										free(buffer);
 										write(socket,"ack",3);
@@ -327,7 +354,16 @@ void *Master_thread(){
 	int thread_size;
 	thread_size = nthread;
 	int sock,addrlen;
+
 	thread=(pthread_t *)malloc(sizeof(pthread_t)*nthread);
+
+	/*struct timeval timeout;
+	timeout.tv_sec=10;
+	timeout.tv_usec=0;*/
+
+
+
+
 		
 	while(1){
 			addrlen=sizeof(servsoc);
@@ -335,7 +371,7 @@ void *Master_thread(){
 								puts("sai no ACCEPT");				
 								exit(1);
 				}
-					
+				//setsockopt(sock,SOL_SOCKET,SO_RCVTIMEO,(char *)&timeout,sizeof(timeout));	
 				printf("connectada a socket:%d\n",sock);			
 				printf("criada thread #%d\n",sum_trd);
 				pthread_create(&thread[sum_trd],NULL,thread_accept,&sock);
@@ -344,6 +380,11 @@ void *Master_thread(){
 				thread_size+=nthread;
 				printf("*** numero maximo de threads atingido, alocando mais %d threads***\n",thread_size);
 				thread=realloc(thread,sizeof(pthread_t)*thread_size);
+			}
+			if(quit==1){
+				puts("libertar threads\n");
+				free(thread);
+				pthread_exit(NULL);
 			}
 		}
 }
@@ -515,6 +556,7 @@ void ler_logfile(){
 			case 'D':   
 						eliminar(list,key);
 						imprimeList(*list);
+						free(temp);
 						break;
 			}
 		}
