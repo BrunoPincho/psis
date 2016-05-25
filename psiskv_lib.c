@@ -40,7 +40,7 @@ int kv_connect(char* kv_server_ip,int kv_server_port){
 	data_soc.sin_port=htons(port);
 	
 	if(connect(data_server,(struct sockaddr*)&data_soc,sizeof(struct sockaddr))<0){
-		return -1;
+			return -1;
 		}
 	
 	return data_server;
@@ -61,18 +61,19 @@ void kv_close(int kv_descriptor){
 
 int kv_write(int kv_descriptor,uint32_t key,char* value,uint32_t value_length,int kv_overwrite){
 	char ACK[4];
-	//struct timeval tv;
-	//int nsele;
+	struct timeval tv;
+	int nsele;
 	bzero(ACK,4);
 	
-	/*fd_set tcpsock;	
+	fd_set tcpsock;	
 	FD_ZERO(&tcpsock);
 	tv.tv_sec=3;
 	tv.tv_usec=0;
-	FD_SET(kv_descriptor,&tcpsock);*/
+	FD_SET(kv_descriptor,&tcpsock);
 	memset(&pacote,0,sizeof(pacote));
+
 	if(kv_overwrite==1){
-		pacote.modo='O';
+			pacote.modo='O';
 		}else{
 			pacote.modo='W';
 		}
@@ -80,15 +81,34 @@ int kv_write(int kv_descriptor,uint32_t key,char* value,uint32_t value_length,in
 		pacote.key=key;
 		pacote.value_length=value_length;
 
+	strcat(value,"\0");
+
 	if((write(kv_descriptor,&pacote,sizeof(pacote)))<0){
 		puts("erro a enviar pacote\n");
 		return -1;
 	}
 	
-	if((write(kv_descriptor,value,value_length-1))<0){
+	if((write(kv_descriptor,value,value_length))<0){
 		puts("erro a enviar value\n");
 		return -1;
 	}
+
+
+	nsele=select(kv_descriptor+1,&tcpsock,0,0,&tv);
+	
+	if(nsele==0){
+		puts("key value storage offline,socket fechada\n");
+		close(kv_descriptor);
+		return -1;
+	}
+	
+	if(nsele<0){
+		puts("erro no selec de timeout\n");
+		return -1;
+	}
+
+
+
 
 	if(read(kv_descriptor,ACK,4)<0){
 		puts("lixou read");
@@ -96,52 +116,15 @@ int kv_write(int kv_descriptor,uint32_t key,char* value,uint32_t value_length,in
 
 	if(strncmp(ACK,"n",1)==0){
 		puts("Ja existe esta chave\n");
-		
 		return -2;
 	}
 	
 	if(strncmp(ACK,"ack",3)==0){
-		puts("sucesso no write\n");
-		
-		return 1;
-	}
-	
-	/*
-	if((write(kv_descriptor,value,value_length))<0){
-		puts("erro a enviar\n");
-		return -1;
-	}
-	*/
-	/*
-	nsele=select(kv_descriptor+1,&tcpsock,0,0,&tv);
-	
-	if(nsele==0){
-		puts("key value storage offline,socket fechada\n");
-		close(kv_descriptor);
-		//free(mensagem);
-		return -1;
-	}
-	
-	if(nsele<0){
-		puts("erro no selec de timeout\n");
-		//free(mensagem);
-		return -1;
-	}
-	
-	if((read(kv_descriptor,ACK,3))<0){
-		puts("falhou o read");
-		//free(mensagem);
-		return -1;	
-	}
-	if(strncmp(ACK,"Ack",3)==0){
-		puts("operação realizada com sucesso");
-		//free(mensagem);
-		if((write(kv_descriptor,pacote.value,value_length))<0){
-		puts("erro a enviar\n");
-		return -1;
-		}
+		puts("sucesso no write\n");		
 		return 0;
-	}*/
+	}
+	
+	
 	
 	return -1;
 }
@@ -203,9 +186,32 @@ int kv_delete(int kv_descriptor,uint32_t key){
 	pacote.modo='D';
 	pacote.key=key;
 	char Ack[3];
+
+	struct timeval tv;
+	int nsele;
+	fd_set tcpsock;	
+	FD_ZERO(&tcpsock);
+	tv.tv_sec=3;
+	tv.tv_usec=0;
+	FD_SET(kv_descriptor,&tcpsock);
 	
 	if(write(kv_descriptor,&pacote,sizeof(pacote))<0){
 		puts("erro a enviar\n");
+		return -1;
+	}
+
+	nsele=select(kv_descriptor+1,&tcpsock,0,0,&tv);
+
+	if(nsele==0){
+		puts("key value storage offline,socket fechada\n");
+		close(kv_descriptor);
+		
+		return -1;
+	}
+	
+	if(nsele<0){
+		puts("erro no selec de timeout\n");
+	
 		return -1;
 	}
 	

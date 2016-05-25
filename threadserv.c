@@ -64,19 +64,7 @@ void dead_parent(int sig_num){
 	
 }
 
-void* brokenpipe(void *arg){
-	sigset_t* set=arg;
-	int sig,s;
-	
-           while(1){
-               s = sigwait(set, &sig);
-               if (s != 0)
-                   puts("erro no sigwait\n");
-               printf("Signal handling thread got signal %d\n", sig);
-           }
-	puts("mario out\n");
-	pthread_exit(NULL);
-}
+
 
 void Frontserver(){
 		int socket;
@@ -134,16 +122,7 @@ void DataServer(){
 
 		porta=cria_server(0);
 
-		/********signal handler sigpiper*********/
 		
-		
-		pthread_t mario;
-		sigset_t signal_mask;
-		sigemptyset (&signal_mask);
-	    sigaddset (&signal_mask, SIGPIPE);
-	    pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
-	    pthread_create(&mario, NULL, &brokenpipe, (void *)&signal_mask);
-
 
 		char responder[5];
 		bzero(responder,5);
@@ -242,31 +221,13 @@ int cria_server(int servidor){
 }
 
 
-int spamcheck(struct Pacote actual,int *spamcount,struct Pacote anterior){
-	
-	if((actual.key==anterior.key) && (actual.modo==anterior.modo) && (actual.value_length==anterior.value_length)){
-		*spamcount+=1;
-		printf("spamcount:%d\n",*spamcount);
-		sleep(1);
-	}
-
-	if(*spamcount>10){
-		return -1;
-	}
-	return 0;
-}
 
 void* thread_accept(void *sd){
 	struct Pacote pacote;	
 	char *buffer;
 	int socket;
 	socket=*((int *) sd);
-
-	struct Pacote anterior;
-	anterior.key=0;
-	anterior.modo=0;
-	anterior.value_length=0;
-	int spamcount=0;
+	int lido;
 		
 		
 		
@@ -274,16 +235,18 @@ void* thread_accept(void *sd){
 	while(1){
 		
 		
-				read(socket,&pacote,sizeof(pacote));
-				printf("lido %d, tamanho %d e modo %c\n",pacote.key,pacote.value_length,pacote.modo);
-
-				if(spamcheck(pacote,&spamcount,anterior)<0){
+				
+				lido=recv(socket,&pacote,sizeof(pacote),MSG_NOSIGNAL);
+				if(lido<=0){
+					printf("Ocorreu erro no receive\n");
 					close(socket);
-					puts("ataque de spam, cliente disconnectado\n");
+					printf("thread nº %d a sair\n",sum_trd);
 					sum_trd--;
 					pthread_exit(NULL);
 				}
-					anterior = pacote;
+
+				printf("lido %d, tamanho %d e modo %c\n",pacote.key,pacote.value_length,pacote.modo);
+
 					switch(pacote.modo){
 						case 'W':									
 										buffer=(char*)malloc(pacote.value_length*sizeof(char));
