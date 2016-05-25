@@ -58,28 +58,25 @@ void dead_child(int sig_num){
 
 void dead_parent(int sig_num){
 	sig_num=0;
+	if(quit!=1){
 		Reboot();
+	}
 	
 }
-/*
-void* brokenpipe(){
-	//sigset_t* set=arg;
-	//int sig;
 
-	struct sigaction sa;
-	sa.sa_handler = SIG_IGN;
-	sa.sa_flags=0;
-
-	for(;;){
-		sigaction(SIGPIPE,&sa,0);
-	}
-
-	//int sock ;
-	//sock=*((int *) arg);
-	//close(sock);
+void* brokenpipe(void *arg){
+	sigset_t* set=arg;
+	int sig,s;
+	
+           while(1){
+               s = sigwait(set, &sig);
+               if (s != 0)
+                   puts("erro no sigwait\n");
+               printf("Signal handling thread got signal %d\n", sig);
+           }
 	puts("mario out\n");
 	pthread_exit(NULL);
-}*/
+}
 
 void Frontserver(){
 		int socket;
@@ -107,13 +104,13 @@ void Frontserver(){
 		cria_server(1);
 		int addrlen1;
 	
-			while(1){
+			while(quit!=1){
 					
 					addrlen1=sizeof(servsoc);
 					
 					if((socket=accept(fs,(struct sockaddr*)&servsoc,(socklen_t *)&addrlen1))==-1){
 								puts("sai no ACCEPT");				
-								exit(1);
+								break;
 						}
 						
 					puts("ligou-se\n");	
@@ -123,6 +120,8 @@ void Frontserver(){
 					write(socket,resposta,5);		
 					
 			}
+			pthread_join(teclas,NULL);
+			exit(0);
 }
 
 
@@ -137,12 +136,13 @@ void DataServer(){
 
 		/********signal handler sigpiper*********/
 		
-		/*pthread_t mario;
+		
+		pthread_t mario;
+		sigset_t signal_mask;
 		sigemptyset (&signal_mask);
 	    sigaddset (&signal_mask, SIGPIPE);
 	    pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
-	    pthread_create(&mario, NULL, &brokenpipe, NULL);
-	   */
+	    pthread_create(&mario, NULL, &brokenpipe, (void *)&signal_mask);
 
 
 		char responder[5];
@@ -241,69 +241,64 @@ int cria_server(int servidor){
 	return -1;
 }
 
+
+int spamcheck(struct Pacote actual,int *spamcount,struct Pacote anterior){
+	
+	if((actual.key==anterior.key) && (actual.modo==anterior.modo) && (actual.value_length==anterior.value_length)){
+		*spamcount+=1;
+		printf("spamcount:%d\n",*spamcount);
+		sleep(1);
+	}
+
+	if(*spamcount>10){
+		return -1;
+	}
+	return 0;
+}
+
 void* thread_accept(void *sd){
 	struct Pacote pacote;	
 	char *buffer;
 	int socket;
 	socket=*((int *) sd);
 
-	/*valores do timeout de recepção*/
-	/*struct timeval tv;
-	fd_set tcpsock;	
-	FD_ZERO(&tcpsock);
-	tv.tv_sec=15000;
-	tv.tv_usec=0;
-
-	FD_SET(socket,&tcpsock);
-	int nsele;
-		*/
+	struct Pacote anterior;
+	anterior.key=0;
+	anterior.modo=0;
+	anterior.value_length=0;
+	int spamcount=0;
 		
 		
 		
 	
 	while(1){
-		/*FD_ZERO(&tcpsock);
-		FD_SET(socket,&tcpsock);
-		nsele=select(socket+1,&tcpsock,0,0,&tv);
-		if(nsele<0){
-			printf("erro no selec de timeout\n");
-			puts("thread a sair");
-					close(socket);
-					sum_trd--;
-					pthread_exit(NULL);
-					return NULL;
-				}
-		if(nsele==0){
-				puts("cliente timedout ,disconnecting\n");
-				printf("thread nº %d a sair\n",sum_trd);
-				close(socket);
-				sum_trd--;
-				pthread_exit(NULL);
-				return NULL;
-				}*/
-			
-			
-						
-				
+		
+		
 				read(socket,&pacote,sizeof(pacote));
 				printf("lido %d, tamanho %d e modo %c\n",pacote.key,pacote.value_length,pacote.modo);
+
+				if(spamcheck(pacote,&spamcount,anterior)<0){
+					close(socket);
+					puts("ataque de spam, cliente disconnectado\n");
+					sum_trd--;
+					pthread_exit(NULL);
+				}
+					anterior = pacote;
 					switch(pacote.modo){
 						case 'W':									
 										buffer=(char*)malloc(pacote.value_length*sizeof(char));
 										bzero(buffer,pacote.value_length);
-										read(socket,buffer,pacote.value_length-1);
+										read(socket,buffer,pacote.value_length);
 										printf("value: %s\n",buffer);
 										if(strcmp(buffer,procura(*list,pacote.key))==0){
 											write(socket,"n",1);
-											free(buffer);
-											
+											free(buffer);	
 										}else{
-									
-										list = novalor(list,pacote.key,buffer,pacote.value_length);
-										//imprimeList(*list);
-										update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
-										free(buffer);
-										write(socket,"ack",3);
+											list = novalor(list,pacote.key,buffer,pacote.value_length);
+											//imprimeList(*list);
+											update_log(pacote.modo,pacote.key,buffer,pacote.value_length);
+											free(buffer);
+											write(socket,"ack",3);
 										}
 										break;
 									
@@ -311,12 +306,18 @@ void* thread_accept(void *sd){
 									buffer=(char*)malloc(pacote.value_length*sizeof(char));
 									read(socket,buffer,pacote.value_length);
 									printf("value: %s\n",buffer);
-									
-									list = altera(list,pacote.key,buffer,pacote.value_length);
-									imprimeList(*list);
-									update_log(pacote.modo,pacote.key,buffer,pacote.value_length+1);
-									free(buffer);
-									write(socket,"ack",3);
+
+									if(strcmp(procura(*list,pacote.key),"\0")==0){
+										write(socket,"n",1);
+										free(buffer);
+										break;
+									}else{
+										list = altera(list,pacote.key,buffer,pacote.value_length);
+										//imprimeList(*list);
+										update_log(pacote.modo,pacote.key,buffer,pacote.value_length+1);
+										free(buffer);
+										write(socket,"ack",3);
+									}
 									break;
 						case 'R':		
 									buffer=(char*)malloc(pacote.value_length*sizeof(char));
@@ -328,13 +329,20 @@ void* thread_accept(void *sd){
 									
 									free(buffer);	
 									break;
-						case 'D':
-									printf("vai ser apagado o valor cuja key é %d",pacote.key);
-									eliminar(list,pacote.key);
-									update_log(pacote.modo,pacote.key,"\0",0);
-									imprimeList(*list);
-									write(socket,"ack",3);		
-									break;				
+
+						case 'D':		
+									if(strcmp(procura(*list,pacote.key),"\0")==0){
+										write(socket,"n",1);
+										break;
+									}else{
+										printf("vai ser apagado o valor cuja key é %d",pacote.key);
+										eliminar(list,pacote.key);
+										update_log(pacote.modo,pacote.key,"\0",0);
+										//imprimeList(*list);
+										write(socket,"ack",3);
+									}		
+									break;
+			
 						case '\0':
 									printf("thread nº %d a sair\n",sum_trd);
 									close(socket);
@@ -343,8 +351,6 @@ void* thread_accept(void *sd){
 									return NULL;		
 									break;	
 				}		
-				
-					
 			}
 
 		return NULL;
@@ -381,12 +387,12 @@ void *Master_thread(){
 				printf("*** numero maximo de threads atingido, alocando mais %d threads***\n",thread_size);
 				thread=realloc(thread,sizeof(pthread_t)*thread_size);
 			}
-			if(quit==1){
-				puts("libertar threads\n");
+			
+		}
+			puts("libertar threads\n");
 				free(thread);
 				pthread_exit(NULL);
-			}
-		}
+
 }
 
 void *ler_teclado(void *fd){
@@ -404,7 +410,7 @@ void *ler_teclado(void *fd){
 			
 			close(fs);
 			sleep(0.1);
-			exit(0);
+			pthread_exit(NULL);
 			
 			}
 	}	
@@ -556,7 +562,7 @@ void ler_logfile(){
 			case 'D':   
 						eliminar(list,key);
 						imprimeList(*list);
-						free(temp);
+						
 						break;
 			}
 		}
